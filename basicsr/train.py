@@ -96,7 +96,7 @@ def train_pipeline(root_path):
     torch.backends.cudnn.benchmark = True
     # torch.backends.cudnn.deterministic = True
 
-    # load resume states if necessary
+    # load对应.state文件
     resume_state = load_resume_state(opt)
     # mkdir for experiments and logger
     if resume_state is None:
@@ -104,23 +104,23 @@ def train_pipeline(root_path):
         if opt['logger'].get('use_tb_logger') and 'debug' not in opt['name'] and opt['rank'] == 0:
             mkdir_and_rename(osp.join(opt['root_path'], 'tb_logger', opt['name']))
 
-    # copy the yml file to the experiment root
-    copy_opt_file(args.opt, opt['path']['experiments_root'])
+    # 把yml文件拷贝到实验文件夹里，方便查看
+    copy_opt_file(args.opt, opt['path']['experiments_root']) 
 
-    # WARNING: should not use get_root_logger in the above codes, including the called functions
-    # Otherwise the logger will not be properly initialized
+    # 以上代码不能使用 get_root_logger 
+    # 否则会导致logger初始化错误
     log_file = osp.join(opt['path']['log'], f"train_{opt['name']}_{get_time_str()}.log")
     logger = get_root_logger(logger_name='basicsr', log_level=logging.INFO, log_file=log_file)
     logger.info(get_env_info())
     logger.info(dict2str(opt))
-    # initialize wandb and tb loggers
+    # 根据需要初始化 wandb logger 和 tensorboard logger
     tb_logger = init_tb_loggers(opt)
 
-    # create train and validation dataloaders
+    # 创建 train 和 validation 的 dataloaders
     result = create_train_val_dataloader(opt, logger)
     train_loader, train_sampler, val_loaders, total_epochs, total_iters = result
 
-    # create model
+    # 创建 model
     model = build_model(opt)
     if resume_state:  # resume training
         model.resume_training(resume_state)  # handle optimizers and schedulers
@@ -131,10 +131,10 @@ def train_pipeline(root_path):
         start_epoch = 0
         current_iter = 0
 
-    # create message logger (formatted outputs)
+    # 用来控制和format logger的信息
     msg_logger = MessageLogger(opt, current_iter, tb_logger)
 
-    # dataloader prefetcher
+    # dataloader prefetcher 提高data IO
     prefetch_mode = opt['datasets']['train'].get('prefetch_mode')
     if prefetch_mode is None or prefetch_mode == 'cpu':
         prefetcher = CPUPrefetcher(train_loader)

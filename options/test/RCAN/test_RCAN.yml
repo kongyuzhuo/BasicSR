@@ -1,35 +1,35 @@
 name: RCAN_BIX4-official
 suffix: ~  # add suffix to saved images
 model_type: SRModel
-scale: 4
+scale: 1
 crop_border: ~  # crop border when evaluation. If None, crop the scale pixels
 num_gpu: 1  # set num_gpu: 0 for cpu mode
 manual_seed: 0
 
 datasets:
   test_1:  # the 1st test dataset
-    name: val_set5
+    name: val_urban1
     type: PairedImageDataset
-    dataroot_gt: ./datasets/val_set5/Set5
-    dataroot_lq: ./datasets/val_set5/Set5_bicLRx4
+    dataroot_gt: /workspace/kyz/dataset/original/test/urban1
+    dataroot_lq: /workspace/kyz/dataset/compressed/test_urban1
     io_backend:
       type: disk
   test_2:  # the 2nd test dataset
-    name: val_set14
+    name: val_urban2
     type: PairedImageDataset
-    dataroot_gt: ./datasets/val_set14/Set14
-    dataroot_lq: ./datasets/val_set14/Set14_bicLRx4
+    dataroot_gt: /workspace/kyz/dataset/original/test/urban2
+    dataroot_lq: /workspace/kyz/dataset/compressed/test_urban2
     io_backend:
       type: disk
 
-  test_3:
-    name: div2k100
-    type: PairedImageDataset
-    dataroot_gt: ./datasets/DIV2K100/DIV2K_valid_HR
-    dataroot_lq: ./datasets/DIV2K100/DIV2K_valid_bicLRx4
-    filename_tmpl: '{}x4'
-    io_backend:
-      type: disk
+  # test_3:
+  #   name: div2k100
+  #   type: PairedImageDataset
+  #   dataroot_gt: ./datasets/DIV2K100/DIV2K_valid_HR
+  #   dataroot_lq: ./datasets/DIV2K100/DIV2K_valid_bicLRx4
+  #   filename_tmpl: '{}x4'
+  #   io_backend:
+  #     type: disk
 
 # network structures
 network_g:
@@ -40,7 +40,7 @@ network_g:
   num_group: 10
   num_block: 20
   squeeze_factor: 16
-  upscale: 4
+  upscale: 1
   res_scale: 1
   img_range: 255.
   rgb_mean: [0.4488, 0.4371, 0.4040]
@@ -49,5 +49,22 @@ save_img: true
 
 # path
 path:
-  pretrain_network_g: ./experiments/pretrained_models/RCAN/RCAN_BIX4-official.pth
+  pretrain_network_g: /workspace/kyz/basicSR/experiments/201_RCANx2_scratch_DIV2K_rand0/models/net_g_latest.pth
   strict_load_g: true
+
+val:
+  val_freq: !!float 5e3
+  save_img: true
+  suffix: ~
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 2
+      test_y_channel: false
+      better: higher
+    ssim:
+      type: calculate_ssim
+      crop_border: 2
+      test_y_channel: false
+      better: higher

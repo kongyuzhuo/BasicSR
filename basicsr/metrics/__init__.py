@@ -16,5 +16,5 @@ def calculate_metric(data, opt):
     """
     opt = deepcopy(opt)
     metric_type = opt.pop('type')
-    metric = METRIC_REGISTRY.get(metric_type)(**data, **opt)
+    metric = METRIC_REGISTRY.get(metric_type)(**data, **opt) # 返回的是函数调用
     return metric

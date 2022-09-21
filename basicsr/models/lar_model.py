@@ -12,11 +12,11 @@ from .base_model import BaseModel
 
 
 @MODEL_REGISTRY.register()
-class SRModel(BaseModel):
+class LARModel(BaseModel):
     """Base SR model for single image super-resolution."""
 
     def __init__(self, opt): # 初始化SR model类，比如定义网络和load weight
-        super(SRModel, self).__init__(opt)
+        super(LARModel, self).__init__(opt)
 
         # define network
         self.net_g = build_network(opt['network_g']) # 根据参数，实例化网络结构
@@ -85,21 +85,32 @@ class SRModel(BaseModel):
         self.optimizers.append(self.optimizer_g)
 
     def feed_data(self, data): # 提供数据，是与dataloader的接口
-        self.lq = data['lq'].to(self.device)
+        self.hp = data['hp'].to(self.device)
         if 'gt' in data:
             self.gt = data['gt'].to(self.device)
 
     def optimize_parameters(self, current_iter): # 一个完整的iteration的step 包括forward、loss计算、backward、参数优化等
         self.optimizer_g.zero_grad() # 使得optimizer中的梯度归零
-        self.output = self.net_g(self.lq) # network forward
+        self.output,self.latent_loss= self.net_g(self.gt,self.hp) # network forward
 
         l_total = 0
+        latent_loss_weight = 0.25
+        recon_loss_sum = 0.
+        latent_loss_sum = 0.
+        cause_recon_loss_sum = 0.
+        
         loss_dict = OrderedDict()
         # pixel loss
         if self.cri_pix:
-            l_pix = self.cri_pix(self.output, self.gt)
-            l_total += l_pix
-            loss_dict['l_pix'] = l_pix
+            
+            cause_recon_loss=self.cri_pix(self.hp,self.gt)
+
+            recon_loss=self.cri_pix(self.output, self.gt)
+            latent_loss=self.latent_loss.mean()
+            l_total = recon_loss + latent_loss_weight * latent_loss
+            loss_dict['l_recon'] = recon_loss
+            loss_dict['l_latent'] = latent_loss
+
         # perceptual loss
         if self.cri_perceptual:
             l_percep, l_style = self.cri_perceptual(self.output, self.gt)
@@ -122,11 +133,11 @@ class SRModel(BaseModel):
         if hasattr(self, 'net_g_ema'):
             self.net_g_ema.eval()
             with torch.no_grad():
-                self.output = self.net_g_ema(self.lq)
+                self.output,self.latent_loss = self.net_g_ema(self.gt,self.hp)
         else:
             self.net_g.eval()
             with torch.no_grad():
-                self.output = self.net_g(self.lq)
+                self.output,self.latent_loss = self.net_g(self.gt,self.hp)
             self.net_g.train()
 
     def dist_validation(self, dataloader, current_iter, tb_logger, save_img):
@@ -153,10 +164,10 @@ class SRModel(BaseModel):
 
         for idx, val_data in enumerate(dataloader):
             img_name = osp.splitext(osp.basename(val_data['lq_path'][0]))[0]
-            self.feed_data(val_data)
-            self.test()
+            self.feed_data(val_data) # 喂测试数据 返回self.hp self.gt
+            self.test() # 测试
 
-            visuals = self.get_current_visuals()
+            visuals = self.get_current_visuals()   # 得到测试结果 字典['hp']['result']['gt']
             sr_img = tensor2img([visuals['result']])
             metric_data['img'] = sr_img
             if 'gt' in visuals:
@@ -165,7 +176,7 @@ class SRModel(BaseModel):
                 del self.gt
 
             # tentative for out of GPU memory
-            del self.lq
+            del self.hp
             del self.output
             torch.cuda.empty_cache()
 
@@ -192,7 +203,7 @@ class SRModel(BaseModel):
         if use_pbar:
             pbar.close()
 
-        if with_metrics:
+        if with_metrics:  # 显示测试结果
             for metric in self.metric_results.keys():
                 self.metric_results[metric] /= (idx + 1)
                 # update the best metric result
@@ -217,7 +228,7 @@ class SRModel(BaseModel):
 
     def get_current_visuals(self): # 得到网络输出的结果
         out_dict = OrderedDict()
-        out_dict['lq'] = self.lq.detach().cpu()
+        out_dict['hp'] = self.hp.detach().cpu()
         out_dict['result'] = self.output.detach().cpu()
         if hasattr(self, 'gt'):
             out_dict['gt'] = self.gt.detach().cpu()

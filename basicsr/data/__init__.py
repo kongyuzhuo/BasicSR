@@ -31,7 +31,7 @@ def build_dataset(dataset_opt):
             type (str): Dataset type.
     """
     dataset_opt = deepcopy(dataset_opt)
-    dataset = DATASET_REGISTRY.get(dataset_opt['type'])(dataset_opt)
+    dataset = DATASET_REGISTRY.get(dataset_opt['type'])(dataset_opt) # 靠着DATASET_REGISTRY.get()就创建了相应的dataset类型
     logger = get_root_logger()
     logger.info(f'Dataset [{dataset.__class__.__name__}] - {dataset_opt["name"]} is built.')
     return dataset

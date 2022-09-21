@@ -1,8 +1,8 @@
 # TODO
 # general settings
-name: 201_RCANx2_scratch_DIV2K_rand0
+name: RCAN_scratch_DIV2K
 model_type: SRModel
-scale: 2
+scale: 1
 num_gpu: 1  # set num_gpu: 0 for cpu mode
 manual_seed: 10
 
@@ -11,8 +11,8 @@ datasets:
   train:
     name: DIV2K
     type: PairedImageDataset
-    dataroot_gt: datasets/DIV2K/DIV2K_train_HR_sub
-    dataroot_lq: datasets/DIV2K/DIV2K_train_LR_bicubic/X2_sub
+    dataroot_gt: /workspace/kyz/dataset/DIV2K_sub/train_HR_sub
+    dataroot_lq: /workspace/kyz/dataset/hyperprior_DIV2K_sub/train_HR_sub
     # (for lmdb)
     # dataroot_gt: datasets/DIV2K/DIV2K_train_HR_sub.lmdb
     # dataroot_lq: datasets/DIV2K/DIV2K_train_LR_bicubic_X2_sub.lmdb
@@ -35,8 +35,8 @@ datasets:
   val:
     name: Set5
     type: PairedImageDataset
-    dataroot_gt: datasets/Set5/GTmod12
-    dataroot_lq: datasets/Set5/LRbicx2
+    dataroot_gt: /workspace/kyz/dataset/DIV2K_sub/valid_HR_sub
+    dataroot_lq: /workspace/kyz/dataset/hyperprior_DIV2K_sub/valid_HR_sub
     io_backend:
       type: disk
 
@@ -49,7 +49,7 @@ network_g:
   num_group: 10
   num_block: 20
   squeeze_factor: 16
-  upscale: 2
+  upscale: 1
   res_scale: 1
   img_range: 255.
   rgb_mean: [0.4488, 0.4371, 0.4040]
@@ -74,7 +74,7 @@ train:
     milestones: [200000]
     gamma: 0.5
 
-  total_iter: 300000
+  total_iter: 400000
   warmup_iter: -1  # no warm up
 
   # losses
